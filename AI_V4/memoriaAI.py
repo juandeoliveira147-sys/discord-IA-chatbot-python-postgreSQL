@@ -5,15 +5,18 @@ import os
 
 load_dotenv()
 senha = os.getenv("SENHA_BANCO_DE_DADOS")
+user_BD = os.getenv("user")
+hostBD = os.getenv("hostBD")
+databaseBD = os.getenv("databaseBD")
 
 def conectar():
     try:
         conect = pg.connect(
-            user = "postgres",
+            user = user_BD,
             password = senha,
-            host = "127.0.0.1",
+            host = hostBD,
             port = "5432",
-            database = "memoriaAI"
+            database = databaseBD
 
         )
         return conect
