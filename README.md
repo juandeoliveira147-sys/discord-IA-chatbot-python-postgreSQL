@@ -54,6 +54,11 @@ Ela foi Programada para disparar o aviso no intervalo de 30 a 0 Minutos antes do
 
 ---
 
+# COMO TESTAR O BOT
+O bot foi instalado na Nuvem, quem quiser pode se sentir livre para testar o bot!
+basta estar no servidor de **testes** entrar no **chat privado** da AI e testar os comandos a vontade!
+
+[Testar a AI](https://discord.gg/mDAr5VGxx)
 
 ## 🔗 Versões anteriores
 
