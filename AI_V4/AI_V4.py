@@ -14,7 +14,7 @@ load_dotenv()
 # Configuração das chaves de acesso
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 
-# Carrega todas as 5 chaves do arquivo .env
+# Carrega todas as chaves do arquivo .env
 CHAVES_API = [
     os.getenv("API_PRINCIPAL"),
     os.getenv("API_RESERVA1"),
