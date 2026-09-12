@@ -58,6 +58,8 @@ Ela foi Programada para disparar o aviso no intervalo de 30 a 0 Minutos antes do
 O bot foi instalado na Nuvem, quem quiser pode se sentir livre para testar o bot!
 basta estar no servidor de **testes** entrar no **chat privado** da AI e testar os comandos a vontade!
 
+**AVISO** é possível que demore cerca de 30 segundos a 1 minuto para responder a primeira mensagem por estar dormindo na hospedagem da nuvem, apartir disso, ela responde normalmente 
+
 [Testar a AI](https://discord.gg/mDAr5VGxx)
 
 ## 🔗 Versões anteriores
