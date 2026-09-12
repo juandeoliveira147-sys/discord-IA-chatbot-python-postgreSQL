@@ -70,7 +70,7 @@ elif primeira_chave.startswith("AQ."):
 def rotacionar_chave_api():
     global indice_chave_atual, client , modelo_atual
     
-    # Avança para a próxima chave. Se chegar na 5ª, volta para a 1ª (índice 0)
+    # Avança para a próxima chave. Se chegar na ultima, volta para a 1ª (índice 0)
     indice_chave_atual = (indice_chave_atual + 1) % len(CHAVES_ATIVAS)
     chave_nova = CHAVES_ATIVAS[indice_chave_atual]
     
