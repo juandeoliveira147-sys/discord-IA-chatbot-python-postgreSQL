@@ -1,0 +1,5 @@
+discord.py
+groq
+openai
+python-dotenv
+psycopg2-binary
