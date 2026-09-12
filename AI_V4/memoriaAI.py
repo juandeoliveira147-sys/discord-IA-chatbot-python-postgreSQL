@@ -5,7 +5,7 @@ import os
 
 load_dotenv()
 senha = os.getenv("SENHA_BANCO_DE_DADOS")
-user_BD = os.getenv("user")
+user_BD = os.getenv("userBD")
 hostBD = os.getenv("hostBD")
 databaseBD = os.getenv("databaseBD")
 
