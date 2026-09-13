@@ -109,7 +109,7 @@ def rotacionar_chave_api():
 def todos_os_lembretes_dos_usuarios():
     conexao = conectar()
     cursor = conexao.cursor()
-    query = 'SELECT * FROM memoriaAI'
+    query = 'SELECT * FROM public.memoriaai'
     cursor.execute(query)
     bancodedados = cursor.fetchall()
     cursor.close()
@@ -124,7 +124,7 @@ def buscar_lembretes_do_banco(usuario_id, canal_id):
         cursor = conexao.cursor()
         
         # Busca as duas colunas necessárias
-        query = "SELECT horario, lembrete FROM memoriaAI WHERE usuario_id=%s AND canal_id=%s"
+        query = "SELECT horario, lembrete FROM public.memoriaAI WHERE usuario_id=%s AND canal_id=%s"
         cursor.execute(query, (str(usuario_id), str(canal_id)))
         resultados = cursor.fetchall()
         
@@ -163,7 +163,7 @@ def editar_lembrete_do_banco(novo_texto, texto_antigo , usuario_id , canal_id,ho
         if horario_novo is not None:
 
             query = """
-                UPDATE memoriaAI 
+                UPDATE public.memoriaai 
                 SET lembrete = %s, horario = %s 
                 WHERE lembrete = %s AND usuario_id = %s AND canal_id = %s
             """
@@ -197,7 +197,7 @@ def excluir_lembrete_do_banco(texto_lembrete, usuario_id, canal_id , horario = N
         
         if tem_horario:
             query = """
-                DELETE FROM memoriaAI
+                DELETE FROM public.memoriaai
                 WHERE lembrete = %s
                 AND usuario_id = %s
                 AND canal_id = %s
@@ -206,7 +206,7 @@ def excluir_lembrete_do_banco(texto_lembrete, usuario_id, canal_id , horario = N
             cursor.execute(query,(texto_lembrete, usuario_id, canal_id,horario))
         else:
             query = """
-                DELETE FROM memoriaAI
+                DELETE FROM public.memoriaai
                 WHERE lembrete = %s
                 AND usuario_id = %s
                 AND canal_id = %s
@@ -237,7 +237,7 @@ def limpar_lembretes_do_banco(usuario_id , canal_id):
         cursor = conexao.cursor()
         
         
-        query = "DELETE FROM memoriaAI WHERE usuario_id=%s AND canal_id=%s;"
+        query = "DELETE FROM public.memoriaai WHERE usuario_id=%s AND canal_id=%s;"
         cursor.execute(query,(usuario_id,canal_id))
         if cursor.rowcount > 0:
             conexao.commit() 
@@ -260,7 +260,7 @@ def salvar_lembrete_no_banco(texto_lembrete, usuario_id, canal_id, horario=None)
     try:
         conexao = conectar()
         cursor = conexao.cursor()
-        query = """INSERT INTO memoriaAI (usuario_id, canal_id, lembrete, horario) VALUES (%s, %s, %s,%s)"""
+        query = """INSERT INTO public.memoriaai (usuario_id, canal_id, lembrete, horario) VALUES (%s, %s, %s,%s)"""
         cursor.execute(query, (usuario_id, canal_id, texto_lembrete,horario))
         if cursor.rowcount > 0:
             print(f"Sucesso! {cursor.rowcount} Lembrete salvo.")
@@ -289,7 +289,7 @@ def salvar_lembrete_no_banco(texto_lembrete, usuario_id, canal_id, horario=None)
 async def lembrete_30min_avisado(usuario_id , canal_id ,lembrete):
     conexao = conectar()
     cursor = conexao.cursor()
-    query = "UPDATE memoriaAI SET aviso_30min = %s WHERE lembrete = %s AND usuario_id= %s AND canal_id=%s"
+    query = "UPDATE public.memoriaai SET aviso_30min = %s WHERE lembrete = %s AND usuario_id= %s AND canal_id=%s"
     cursor.execute(query, (True , lembrete , usuario_id, canal_id))
     if cursor.rowcount > 0:
         print(f"\nSucesso! {cursor.rowcount} ao editar.\n")
@@ -317,7 +317,7 @@ async def enviar_lembrete_30min(usuario_id ,canal_id ,lembrete,  minutos):
 async def lembretes_avisados(usuario_id , canal_id ,lembrete):
     conexao = conectar()
     cursor = conexao.cursor()
-    query = "UPDATE memoriaAI SET enviado = %s WHERE lembrete = %s AND usuario_id= %s AND canal_id=%s"
+    query = "UPDATE public.memoriaai SET enviado = %s WHERE lembrete = %s AND usuario_id= %s AND canal_id=%s"
     cursor.execute(query, (True , lembrete , usuario_id, canal_id))
     if cursor.rowcount > 0:
         print(f"\nSucesso! {cursor.rowcount} ao editar.\n")
