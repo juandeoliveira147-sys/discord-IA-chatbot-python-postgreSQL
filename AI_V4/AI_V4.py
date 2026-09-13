@@ -9,6 +9,7 @@ from groq import Groq
 from openai import OpenAI
 from memoriaAI import conectar, encerrar_conexao
 from dotenv import load_dotenv
+from aiohttp import web
 
 load_dotenv()
 
@@ -680,6 +681,23 @@ intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
+async def handle_ping(request):
+    return web.Response(text="Bot está vivo!")
+
+async def start_web_server():
+    app = web.Application()
+    app.router.add_get('/ping', handle_ping)
+    port = int(os.environ.get("PORT", 8080)) 
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, '0.0.0.0', port)
+    await site.start()
+    print(f"Servidor HTTP rodando na porta {port}")
+
+@bot.event
+async def setup_hook():
+    bot.loop.create_task(start_web_server())
+
 @bot.event
 async def on_ready():
     agora = datetime.now(ZoneInfo("America/Sao_Paulo"))
@@ -744,6 +762,8 @@ async def on_message(message):
                     await message.reply("Desculpa... Tive um probleminha para acessar minhas anotações agora. (｡•́︿•̀｡)")
 
     await bot.process_commands(message)
+
+
 
 # Executa o bot oficial
 bot.run(DISCORD_TOKEN)
