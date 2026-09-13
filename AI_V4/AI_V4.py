@@ -2,7 +2,8 @@ import os
 import discord
 import asyncio
 import re
-from datetime import datetime
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 from discord.ext import commands
 from groq import Groq
 from openai import OpenAI
@@ -342,37 +343,55 @@ async def avisar_lembrete_AGORA(usuario_id , canal_id ,lembrete):
 
 async def verificar_lembretes():
     while True:
-        agora = datetime.now()
-
-        lembretes = todos_os_lembretes_dos_usuarios()
-        for lembrete in lembretes:
+        try:
+            agora = datetime.now(ZoneInfo("America/Sao_Paulo"))
+            lembretes = todos_os_lembretes_dos_usuarios()
             
-            usuario_id = lembrete[1]
-            canal_id = lembrete[2]
-            lembrete_escolhido = lembrete[3]
-            horario = lembrete[4]
-            aviso_30minutos = lembrete[5]
-            todos_avisos_enviados = lembrete[6]
-            if horario is None:
+            # Se a conexão falhar e retornar None ou lista vazia, pula para o próximo ciclo
+            if not lembretes:
+                await asyncio.sleep(30)
                 continue
-            horario_lembrete = datetime.combine(
+
+            for lembrete in lembretes:
+                usuario_id = lembrete[1]
+                canal_id = lembrete[2]
+                lembrete_escolhido = lembrete[3]
+                horario = lembrete[4]  # Este é o objeto 'time' que vem do banco
+                aviso_30minutos = lembrete[5]
+                todos_avisos_enviados = lembrete[6]
+                
+                if horario is None:
+                    continue
+                
+                # CORREÇÃO CRUCIAL AQUI: Junta a data de hoje + hora do banco + fuso de SP
+                horario_lembrete = datetime.combine(
                     agora.date(),
-                    horario
+                    horario,
+                    tzinfo=ZoneInfo("America/Sao_Paulo")
                 )
-            diferenca = horario_lembrete - agora
-            if diferenca.total_seconds() < 0:
-                await lembretes_avisados(usuario_id , canal_id ,lembrete_escolhido)
+            
+                diferenca = horario_lembrete - agora
+                segundos = diferenca.total_seconds()
 
-            elif diferenca.total_seconds() < 300 and diferenca.total_seconds() > -300:
-                if todos_avisos_enviados == False:
-                    await avisar_lembrete_AGORA(usuario_id , canal_id ,lembrete_escolhido)
+                if segundos < 0:
+                    await lembretes_avisados(usuario_id, canal_id, lembrete_escolhido)
 
-            elif diferenca.total_seconds() <= 1800:
-                if aviso_30minutos == False:
-                    minutos = int(diferenca.total_seconds() // 60)
-                    await enviar_lembrete_30min(usuario_id , canal_id , lembrete_escolhido , minutos)
+                elif -300 < segundos < 300:
+                    if todos_avisos_enviados == False:
+                        await avisar_lembrete_AGORA(usuario_id, canal_id, lembrete_escolhido)
 
+                elif segundos <= 1800:
+                    if aviso_30minutos == False:
+                        minutos = int(segundos // 60)
+                        await enviar_lembrete_30min(usuario_id, canal_id, lembrete_escolhido, minutos)
+
+        except Exception as e:
+            # Proteção para o while True nunca morrer se o Supabase cair por 1 segundo
+            print(f"❌ Erro no loop de verificação de lembretes: {e}")
+
+        # Espera 30 segundos antes de verificar novamente
         await asyncio.sleep(30)
+
 #============================================================================================ 
 
 
@@ -385,12 +404,13 @@ async def obter_resposta_groq(id_contexto, mensagem_usuario, usuario_id, canal_i
     # CORREÇÃO: O prompt busca a memória atualizada do banco toda vez que uma mensagem chega
     lembretes_atuais = buscar_lembretes_do_banco(usuario_id , canal_id)
 
-    agora = datetime.now()
+    agora = datetime.now(ZoneInfo("America/Sao_Paulo"))
     
     PROMPT_SISTEMA = (
         "Seu nome é AI, uma assistente virtual pessoal focada em lembretes, organização e suporte diário NO DISCORD. "
         "Sua personalidade é extremamente simpática e acolhedora, agindo sempre como uma assistente muito dedicada.\n\n"
         "SEJA SEMPRE BREVE COM NO MAXÍMO 1800 CARACTERES"
+        f"LEMBRE-SE, É MUITO IMPORTANTE QUE VOCÊ CALCULE OS LEMBRETES NO HORARIO DE AMERICA/SÃO PAULO/BRASIL, HORA ATUAL:{agora}"
         f"Estes são os lembretes do usuário recuperados do banco de dados agora: [{lembretes_atuais}]. "
         "Você deve SEMPRE lembrar o usuário de todos os LEMBRETES QUE ELE PEDIR. Se o usuário pedir, mostre essa lista com carinho.\n\n"
         "Quando for MOSTRAR os lembretes para o usuario, mostre os lembretes escrito corrigidamente"
@@ -662,9 +682,11 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 
 @bot.event
 async def on_ready():
+    agora = datetime.now(ZoneInfo("America/Sao_Paulo"))
     print(f"==================================================")
     print(f"  AI está ativada! ")
     print(f"  Conectado como: {bot.user}")
+    print(f"Horario{agora}")
     print(f"==================================================")
     bot.loop.create_task(
         
