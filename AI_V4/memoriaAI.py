@@ -13,11 +13,11 @@ hostBD = os.getenv("hostBD")
 databaseBD = os.getenv("databaseBD")
 """
 
-database_url = os.getenv("databasesupabase")
 def conectar():
     try:
+        DATABASE_URL = os.getenv("databasesupabase")
         conect = pg.connect(
-            database_url
+            DATABASE_URL
 
         )
         return conect
