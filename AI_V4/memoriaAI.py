@@ -22,6 +22,7 @@ def conectar():
         return conect
     except Error as e:
         print(f"Ocorreu um erro ao se conectar ao banco de dados: {e}")
+        raise e
 
 def encerrar_conexao(conect):
     if conect:
