@@ -4,19 +4,20 @@ from dotenv import load_dotenv
 import os
 
 load_dotenv()
+"""
+caso alguém queira usar futuramente sem estar na nuvem!
+
 senha = os.getenv("SENHA_BANCO_DE_DADOS")
 user_BD = os.getenv("userBD")
 hostBD = os.getenv("hostBD")
 databaseBD = os.getenv("databaseBD")
+"""
 
+database_url = os.getenv("databasesupabase")
 def conectar():
     try:
         conect = pg.connect(
-            user = user_BD,
-            password = senha,
-            host = hostBD,
-            port = "5432",
-            database = databaseBD
+            database_url
 
         )
         return conect
