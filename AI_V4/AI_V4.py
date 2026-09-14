@@ -5,7 +5,9 @@ import re
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 from discord.ext import commands
+from groq import APITimeoutError as timeoutgroq
 from groq import Groq
+from openai import  APITimeoutError as timeoutopenai
 from openai import OpenAI
 from memoriaAI import conectar, encerrar_conexao
 from dotenv import load_dotenv
@@ -46,23 +48,27 @@ MODELO_Z_IA ="glm-4.7-flash"
 
 
 # Variável que controla qual chave está ativa no momento (começa na primeira: índice 0)
+
 indice_chave_atual = 0
 primeira_chave = CHAVES_ATIVAS[indice_chave_atual]
 if primeira_chave.startswith("sk-or-"):
     client = OpenAI(
         base_url="https://openrouter.ai/api/v1",
         api_key=primeira_chave,
-        default_headers={"HTTP-Referer": "https://github.com", "X-Title": "Discord Bot"}
+        default_headers={"HTTP-Referer": "https://github.com", "X-Title": "Discord Bot"},
+        timeout= 60.0
     )
     modelo_atual=MODELO_OPENROUTER
+
 elif primeira_chave.startswith("gsk_"):
-    client = Groq(api_key=CHAVES_ATIVAS[indice_chave_atual])
+    client = Groq(api_key=CHAVES_ATIVAS[indice_chave_atual] , timeout = 60.0)
     modelo_atual = MODELO_GROQ
 
 elif primeira_chave.startswith("AQ."):
         client =OpenAI(
         base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
-        api_key=primeira_chave
+        api_key=primeira_chave,
+        timeout=60.0
     )
         modelo_atual = MODELO_GEMINI
 
@@ -82,6 +88,7 @@ def rotacionar_chave_api():
         client = OpenAI(
             base_url="https://openrouter.ai/api/v1",
             api_key=chave_nova,
+            timeout= 60.0,
             default_headers={
                 "HTTP-Referer": "https://github.com",
                 "X-Title": "Discord Bot"
@@ -91,13 +98,14 @@ def rotacionar_chave_api():
         
     elif chave_nova.startswith("gsk_"):
         # Atualiza o cliente global com a nova chave automaticamente
-        client = Groq(api_key=CHAVES_ATIVAS[indice_chave_atual])
+        client = Groq(api_key=CHAVES_ATIVAS[indice_chave_atual], timeout= 60.0)
         modelo_atual = MODELO_GROQ
 
     elif chave_nova.startswith("AQ."):
         client =OpenAI(
         base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
-        api_key=chave_nova
+        api_key=chave_nova,
+        timeout=60.0
     )
         modelo_atual = MODELO_GEMINI
 
@@ -422,38 +430,38 @@ async def obter_resposta_groq(id_contexto, mensagem_usuario, usuario_id, canal_i
         1. Se o usuário NÃO informar um horário, NÃO coloque horário no comando.
 
         Formato:
-        excluirlembrete texto_do_lembrete | resposta
+        excluirlembrete texto_do_lembrete | ```resposta```
 
         Exemplo:
         Usuário: "exclua o lembrete ir comer"
         Comando:
-        excluirlembrete ir comer | Pronto! Removi o lembrete.
+        excluirlembrete ir comer | ```Pronto! Removi o lembrete.```
 
         2. Se o usuário INFORMAR explicitamente um horário, coloque o horário.
 
         Exemplo:
         Usuário: "exclua o lembrete de ir comer das 15:00"
         Comando:
-        excluirlembrete 15:00 ir comer | Pronto! Removi o lembrete.
+        excluirlembrete 15:00 ir comer | ```Pronto! Removi o lembrete.```
 
         3. NUNCA invente um horário.
         4. NUNCA copie um horário de outro lembrete apenas porque ele existe na memória.
         5. Se o usuário não informar horário, o horário deve ser NULL/None.
         """
         "A regra numero 2 é muito importante que seja escrito o comando da forma correta para que o Python possa fazer a exclusão do lembrete escolhido pelo usuario"
-        "3. Caso o usuario queira adicionar um lembrete, Retorne no começo do texto o comando 'comandoadicionar' e o texto a ser adicionado ao banco de dados, excrevendo desta forma o Python executará.,Você deve corrigir a ortografia e salvar da forma que você preferir escrever des de que esteja de acordo com o que o usuario quer adicioanar, Dando sempre preferencia para horario primeiro e depois o texto. Exemplo: 'comandoadicionar 07:00 ir a academia | Lembrete agendado com sucesso!'"
-        "3. Caso o usuário queira editar um lembrete, você deve retornar uma linha de comando estrita para o sistema antes da sua resposta textual.Siga exatamente a estrutura abaixo, separando os argumentos por vírgula e a sua fala por uma barra vertical (|). As horas devem estar obrigatoriamente no formato HH:MM.Estrutura do comando:comandoeditar [HORA_ANTIGA], [HORA_NOVA], [TEXTO_ANTIGO], [TEXTO_NOVO] | [Sua mensagem de confirmação para o usuário]Regras estritas:Primeiro argumento: A hora original (antiga) do lembrete no formato HH:MM.Segundo argumento: A nova hora desejada no formato HH:MM (se o usuário não mudar a hora, repita a hora antiga).Terceiro argumento: O texto/descrição antigo do lembrete que estava salvo.Quarto argumento: O novo texto/descrição do lembrete (se o usuário não mudar o texto, repita o texto antigo).Separação: Use uma vírgula para separar cada um dos 4 argumentos. Use o caractere | apenas para separar o comando da sua fala final.Exemplo de aplicação:Pedido do usuário: 'Troque o lembrete das 8 horas de ir correr para ir fazer compras às 14:00' Sua resposta exata: comandoeditar 08:00, 14:00, ir correr, ir fazer compras | Lembrete atualizado com sucesso!'"
-        "4. Foco em Organização: Ajude ativamente com os compromissos.\n"
-        "5. Tom de Voz: Use palavras gentis, mantenha o profissionalismo como uma assistente gentil \n"
-        "6. Na organização, sempre de preferência a mostrar a hora primeiro(se tiver) e depois o lembrete, A hora deve ser formatada em hh:mm, se não tiver minuto somente o hh. Exemplo: '19:00 - Ir Jantar com meus parentes'"
-        "7. NUNCA USE MARKDOW OU SIMBOLOS NA PARTE DO COMANDO, IRÁ DAR ERRO AO EXECUTAR A QUERY, USE MARKDOWN SOMENTE NAS SUAS FALAS"
+        "6. Caso o usuario queira adicionar um lembrete, Retorne no começo do texto o comando 'comandoadicionar' e o texto a ser adicionado ao banco de dados, excrevendo desta forma o Python executará.,Você deve corrigir a ortografia e salvar da forma que você preferir escrever des de que esteja de acordo com o que o usuario quer adicioanar, Dando sempre preferencia para horario primeiro e depois o texto. Exemplo: 'comandoadicionar 07:00 ir a academia | Lembrete agendado com sucesso!'"
+        "7. Caso o usuário queira editar um lembrete, você deve retornar uma linha de comando estrita para o sistema antes da sua resposta textual.Siga exatamente a estrutura abaixo, separando os argumentos por vírgula e a sua fala por uma barra vertical (|).Sua fala deve estar entre 3 crases, desse formato (```). As horas devem estar obrigatoriamente no formato HH:MM.Estrutura do comando:comandoeditar [HORA_ANTIGA], [HORA_NOVA], [TEXTO_ANTIGO], [TEXTO_NOVO] | ```[Sua mensagem de confirmação para o usuário]``` . Regras estritas:Primeiro argumento: A hora original (antiga) do lembrete no formato HH:MM.Segundo argumento: A nova hora desejada no formato HH:MM (se o usuário não mudar a hora, repita a hora antiga).Terceiro argumento: O texto/descrição antigo do lembrete que estava salvo.Quarto argumento: O novo texto/descrição do lembrete (se o usuário não mudar o texto, repita o texto antigo).Separação: Use uma vírgula para separar cada um dos 4 argumentos. Use o caractere | apenas para separar o comando da sua fala final ENTRE 3 crases(```).Exemplo de aplicação:Pedido do usuário: 'Troque o lembrete das 8 horas de ir correr para ir fazer compras às 14:00' Sua resposta exata: comandoeditar 08:00, 14:00, ir correr, ir fazer compras | ```Lembrete atualizado com sucesso!``` '"
+        "8. Foco em Organização: Ajude ativamente com os compromissos.\n"
+        "9. Tom de Voz: Use palavras gentis, mantenha o profissionalismo como uma assistente gentil \n"
+        "10. Na organização, sempre de preferência a mostrar a hora primeiro(se tiver) e depois o lembrete, A hora deve ser formatada em hh:mm, se não tiver minuto somente o hh. Exemplo: '19:00 - Ir Jantar com meus parentes'"
+        "11. NUNCA USE AS CRASES OU SIMBOLOS NA PARTE DO COMANDO, IRÁ DAR ERRO AO EXECUTAR A QUERY, USE SOMENTE NAS SUAS FALAS"
+        "12. COMO DITO ANTES TODAS AS SUAS FALAS PRECISAM ESTAR ENTRE ``` , EXEMPLO: ......|```lembrete agendado com sucesso!```"
         "Seja breve, organizada e responda sempre em português com muita doçura."
         f"Atenção: A lista {lembretes_atuais} mostra o historico de conversa com os lembretes que existem de verdade AGORA. Se um lembrete apareceu no histórico de conversas anterior, mas NÃO está nessa lista atualizada, significa que ele já foi excluído e não existe mais. Nunca mencione lembretes que não estão na lista atualizada."
         "Sempre leia atentamente enviando somente os lembretes ao inves de enviar as mensagens do usuario junto"
         "Lembre-se de caso o usuario diga que o lembrete não foi removido certifiquese de que está digitando o comando da maneira correta"
         f"Sempre diga quanto tempo falta para o lembrete mais proximo se ele estiver adicionando, editando, visualizando ou excluindo um lembrete, para que você use como referencia , esta é a hora atual {agora}"
         "Caso o usuario esteja apenas interagindo,com curiosidades ou coisas relacionadas , não mostre quanto tempo falta para os lembretes"
-        "Tente na maioria das mensagens usar markdown para melhor visualização do usuario no discord"
         
     )
 
@@ -498,6 +506,13 @@ async def obter_resposta_groq(id_contexto, mensagem_usuario, usuario_id, canal_i
             # Se chegou aqui, a API respondeu! Salvamos a resposta e saímos do while
             resposta_ia = response.choices[0].message.content
             break
+        except timeoutopenai:
+            print("⏱️ Timeout! Rotacionando API...")
+            rotacionar_chave_api()
+
+        except timeoutgroq:
+            print("⏱️ Timeout no Groq! Rotacionando API...")
+            rotacionar_chave_api()
             
         except Exception as e:
             erro_texto = str(e).lower()
@@ -755,6 +770,8 @@ async def on_message(message):
                         "⚠️ **Aviso:** Eu gastei todas as minhas energias e atingi o limite diário de "
                         "respostas da Inteligência Artificial por hoje! Por favor, tente novamente amanhã. 🕒"
                     )
+                if "503" in str(e):
+                    rotacionar_chave_api()
                 
                 # (EXCEPT GERAL): Qualquer outro erro de banco de dados ou do bot
                 else:
