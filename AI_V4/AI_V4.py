@@ -296,13 +296,17 @@ def salvar_lembrete_no_banco(texto_lembrete, usuario_id, canal_id, horario=None)
 
 
 #======================AVISOS DE LEMBRETES AUTOMATICOS===================
-async def lembrete_30min_avisado(usuario_id , canal_id ,lembrete):
+async def lembrete_30min_avisado(usuario_id , canal_id ,lembrete , horario=None):
     conexao = conectar()
     cursor = conexao.cursor()
-    query = "UPDATE public.memoriaai SET aviso_30min = %s WHERE lembrete = %s AND usuario_id= %s AND canal_id=%s"
-    cursor.execute(query, (True , lembrete , usuario_id, canal_id))
+    if horario is not None:
+        query = "UPDATE public.memoriaai SET aviso_30min = %s WHERE lembrete = %s AND usuario_id= %s AND canal_id=%s AND horario=%s"
+        cursor.execute(query, (True , lembrete , usuario_id, canal_id, horario))
+    else:
+        query = "UPDATE public.memoriaai SET aviso_30min = %s WHERE lembrete = %s AND usuario_id= %s AND canal_id=%s"
+        cursor.execute(query, (True , lembrete , usuario_id, canal_id))
     if cursor.rowcount > 0:
-        print(f"\nSucesso! {cursor.rowcount} ao editar.\n")
+        print(f"\nSucesso! {cursor.rowcount} lembrete de 30 min avisado.\n")
         conexao.commit()
         sucesso = True
         
@@ -317,20 +321,24 @@ async def lembrete_30min_avisado(usuario_id , canal_id ,lembrete):
     return sucesso
 
 
-async def enviar_lembrete_30min(usuario_id ,canal_id ,lembrete,  minutos):
+async def enviar_lembrete_30min(usuario_id ,canal_id ,lembrete,  minutos , horario= None):
     canal = bot.get_channel(int(canal_id))
     if canal is None:
         canal = await bot.fetch_channel(int(canal_id))
     await canal.send(f"⏰ Daqui a {minutos} minutos: {lembrete}")
-    await lembrete_30min_avisado(usuario_id ,canal_id , lembrete)
+    await lembrete_30min_avisado(usuario_id ,canal_id , lembrete , horario)
 
-async def lembretes_avisados(usuario_id , canal_id ,lembrete):
+async def lembretes_avisados(usuario_id , canal_id ,lembrete , horario=None):
     conexao = conectar()
     cursor = conexao.cursor()
-    query = "UPDATE public.memoriaai SET enviado = %s WHERE lembrete = %s AND usuario_id= %s AND canal_id=%s"
-    cursor.execute(query, (True , lembrete , usuario_id, canal_id))
+    if horario is not None:
+        query = "UPDATE public.memoriaai SET enviado = %s WHERE lembrete = %s AND usuario_id= %s AND canal_id=%s AND horario=%s"
+        cursor.execute(query, (True , lembrete , usuario_id, canal_id, horario))
+    else:
+        query = "UPDATE public.memoriaai SET enviado = %s WHERE lembrete = %s AND usuario_id= %s AND canal_id=%s"
+        cursor.execute(query, (True , lembrete , usuario_id, canal_id))
     if cursor.rowcount > 0:
-        print(f"\nSucesso! {cursor.rowcount} ao editar.\n")
+        print(f"\nSucesso! {cursor.rowcount} , editando lembrete que foi marcado como avisado.\n")
         conexao.commit() 
         
     else:
@@ -341,12 +349,15 @@ async def lembretes_avisados(usuario_id , canal_id ,lembrete):
     cursor.close()
     encerrar_conexao(conexao)
 
-async def avisar_lembrete_AGORA(usuario_id , canal_id ,lembrete):
+async def avisar_lembrete_AGORA(usuario_id , canal_id ,lembrete , horario=None):
     canal = bot.get_channel(int(canal_id))
     if canal is None:
         canal = await bot.fetch_channel(int(canal_id))
     await canal.send(f"⏰ ESTÁ NA HORA DE : {lembrete}")
-    await lembretes_avisados(usuario_id ,canal_id , lembrete)
+    if horario is not None:
+        await lembretes_avisados(usuario_id ,canal_id , lembrete,horario)
+    else:
+        await lembretes_avisados(usuario_id ,canal_id , lembrete)
     
 
 
@@ -382,17 +393,18 @@ async def verificar_lembretes():
                 diferenca = horario_lembrete - agora
                 segundos = diferenca.total_seconds()
 
-                if segundos < 0:
-                    await lembretes_avisados(usuario_id, canal_id, lembrete_escolhido)
-
-                elif -300 < segundos < 300:
+                if -300 < segundos < 300:
                     if todos_avisos_enviados == False:
-                        await avisar_lembrete_AGORA(usuario_id, canal_id, lembrete_escolhido)
+                        await avisar_lembrete_AGORA(usuario_id, canal_id, lembrete_escolhido , horario)
+
+                elif segundos < 0 and todos_avisos_enviados == False:
+                    await lembretes_avisados(usuario_id, canal_id, lembrete_escolhido , horario)
+
 
                 elif segundos <= 1800:
                     if aviso_30minutos == False:
                         minutos = int(segundos // 60)
-                        await enviar_lembrete_30min(usuario_id, canal_id, lembrete_escolhido, minutos)
+                        await enviar_lembrete_30min(usuario_id, canal_id, lembrete_escolhido, minutos , horario)
 
         except Exception as e:
             # Proteção para o while True nunca morrer se o Supabase cair por 1 segundo
@@ -456,6 +468,7 @@ async def obter_resposta_groq(id_contexto, mensagem_usuario, usuario_id, canal_i
         "10. Na organização, sempre de preferência a mostrar a hora primeiro(se tiver) e depois o lembrete, A hora deve ser formatada em hh:mm, se não tiver minuto somente o hh. Exemplo: '19:00 - Ir Jantar com meus parentes'"
         "11. NUNCA USE AS CRASES OU SIMBOLOS NA PARTE DO COMANDO, IRÁ DAR ERRO AO EXECUTAR A QUERY, USE SOMENTE NAS SUAS FALAS"
         "12. COMO DITO ANTES TODAS AS SUAS FALAS PRECISAM ESTAR ENTRE ``` , EXEMPLO: ......|```lembrete agendado com sucesso!```"
+        "13. CASO O ASSUNTO FOR SOBRE CODIGO E VOCÊ MANDAR UM BLOCO DE CODIGO, VOCÊ DEVE SEPARAR SUAS PALAVRAS DO CODIGO ENVIADO , USANDO 3(`) PARA FINALIZAR SUA FRASE E 3(`) PARA COMEÇAR O CODIGO DANDO ESPAÇO ENTRE AS 3 CRASES DE CADA AÇÃO. EXEMPLO DA SUA FALA NESSES CASOS:' ```Aqui está um um codigo Python para resolver o problema que você pediu ``` ```codigo ennviado``` ``` dessa forma seu problema estará resolvido '.  SIGA DESTA EXATA FORMA EM SUAS FALAS!"
         "Seja breve, organizada e responda sempre em português com muita doçura."
         f"Atenção: A lista {lembretes_atuais} mostra o historico de conversa com os lembretes que existem de verdade AGORA. Se um lembrete apareceu no histórico de conversas anterior, mas NÃO está nessa lista atualizada, significa que ele já foi excluído e não existe mais. Nunca mencione lembretes que não estão na lista atualizada."
         "Sempre leia atentamente enviando somente os lembretes ao inves de enviar as mensagens do usuario junto"
@@ -550,7 +563,7 @@ async def obter_resposta_groq(id_contexto, mensagem_usuario, usuario_id, canal_i
                     continue  # Faz o 'while' voltar para o topo e tentar a MESMA mensagem com a chave nova
                 else:
                     # Se estourar todas as chaves, para o loop e joga o erro para o on_message tratar
-                    raise Exception("TODAS_AS_APIS_ESGOTADAS")
+                    raise e
                     
             else:
                 # Se for qualquer outro erro crítico, repassa o erro imediatamente
@@ -735,7 +748,7 @@ async def on_message(message):
         texto_usuario = message.content.replace(f"<@{bot.user.id}>", "").strip()
         
         if not texto_usuario:
-            await message.channel.send("Estou aqui! Precisa que eu anote algum lembrete? (ˆ.ˆ)")
+            await message.channel.send("Estou aqui! Precisa que eu anote algum lembrete? ")
             return
 
         id_contexto = str(message.channel.id)
@@ -743,6 +756,7 @@ async def on_message(message):
         usuario_id = str(message.author.id)
         canal_id = str(message.channel.id)
 
+    while True:
         async with message.channel.typing():
             try:
                 resposta_rpg = await obter_resposta_groq(
@@ -759,24 +773,26 @@ async def on_message(message):
                         await message.reply(pedaco)
                 else:
                     await message.reply(resposta_rpg)
+
+                break
+                
             except Exception as e:
                 # Transforma o erro em texto para analisar o que aconteceu
                 erro_texto = str(e).lower()
                 
                 # (EXCEPT DE LIMITE DA API): Se o erro contiver códigos de limite do Groq
                 if "429" in erro_texto or "rate_limit" in erro_texto or "rate limit" in erro_texto:
-                    print(f"\n[ALERTA DE API] Limite diário de tokens atingido! Detalhes: {e}\n")
-                    await message.reply(
-                        "⚠️ **Aviso:** Eu gastei todas as minhas energias e atingi o limite diário de "
-                        "respostas da Inteligência Artificial por hoje! Por favor, tente novamente amanhã. 🕒"
-                    )
+                    rotacionar_chave_api()
+                    continue
                 if "503" in str(e):
                     rotacionar_chave_api()
-                
+                    continue
                 # (EXCEPT GERAL): Qualquer outro erro de banco de dados ou do bot
                 else:
                     print(f"Erro detectado no processamento: {e}")
                     await message.reply("Desculpa... Tive um probleminha para acessar minhas anotações agora. (｡•́︿•̀｡)")
+                    await message.reply("cai num erro desconhecido...estarei em manutenção por um tempo")
+                    break
 
     await bot.process_commands(message)
 
