@@ -19,11 +19,16 @@ A **AI_V4** funciona como um assistente virtual dentro do Discord.
 * ❌ Excluir lembretes
 * 🧹 Limpar todos os lembretes
 * ⏰ Avisar automaticamente quando um lembrete estiver próximo
-* 🔔 Enviar avisos 30 minutos antes
+* 🔔 Enviar avisos até 30 minutos antes do lembrete
+* 🔄 Reiniciar os status de aviso quando um lembrete é editado
 * 🗄️ Armazenar os lembretes no PostgreSQL
 * 🔄 Alternar automaticamente entre diferentes chaves de API
 * 🤖 Utilizar diferentes provedores de modelos de IA
+* 🧩 Interpretar comandos através de expressões regulares
+* 📋 Processar múltiplos comandos em uma única resposta
+* 🌎 Trabalhar com o horário de America/Sao_Paulo
 * 📱 Funcionar diretamente através do Discord
+* ☁️ Ser executada em ambiente de nuvem
 
 ---
 
@@ -47,7 +52,22 @@ A **AI_V4** funciona como um assistente virtual dentro do Discord.
 
 ### 🔔 Aviso automático
 
-Ela foi Programada para disparar o aviso no intervalo de 30 a 0 Minutos antes do horario do lembrete e dispara um ultimo lembrete de quando está na hora de executar a tarefa no intervalo de 5 minutos antes até 5 minutos depois!
+O sistema verifica os lembretes automaticamente a cada **30 segundos**.
+
+Quando um lembrete está dentro da janela de 30 minutos antes do horário programado, a AI pode enviar um aviso indicando quanto tempo falta.
+
+Quando o horário do lembrete chega, o bot envia uma segunda mensagem informando que está na hora de realizar a tarefa.
+
+O sistema utiliza dois status no banco de dados:
+
+* `aviso_30min` → indica se o aviso antecipado já foi enviado
+* `enviado` → indica se o lembrete principal já foi enviado
+
+Quando um lembrete é editado, os dois status são redefinidos para `False`, fazendo com que o lembrete editado seja tratado como um novo agendamento.
+
+Todos os horários são tratados utilizando o fuso:
+
+`America/Sao_Paulo`
 
 **<img width="857" height="366" alt="Captura de tela 2026-09-12 160720" src="https://github.com/user-attachments/assets/e3efaca3-277e-4582-8524-8f0f6efef80e" />
 **
@@ -131,54 +151,75 @@ A aplicação também possui um sistema de lembretes persistentes utilizando **P
 O funcionamento principal da AI_V4 pode ser representado da seguinte maneira:
 
 ```text
-                    ┌──────────────────┐
-                    │      USUÁRIO     │
-                    │     Discord      │
-                    └────────┬─────────┘
-                             │
-                             ▼
-                    ┌──────────────────┐
-                    │    AI_V4.py      │
-                    │   Discord Bot    │
-                    └────────┬─────────┘
-                             │
-                    ┌────────▼─────────┐
-                    │ Histórico +      │
-                    │ Lembretes        │
-                    └────────┬─────────┘
-                             │
-                             ▼
-                    ┌──────────────────┐
-                    │    APIs de IA    │
-                    │                  │
-                    │ Groq             │
-                    │ OpenRouter       │
-                    │ Gemini           │
-                    └────────┬─────────┘
-                             │
-                             ▼
-                    ┌──────────────────┐
-                    │ Processamento da │
-                    │ resposta         │
-                    └────────┬─────────┘
-                             │
-                  ┌──────────┴──────────┐
-                  │                     │
-                  ▼                     ▼
-        ┌──────────────────┐   ┌──────────────────┐
-        │ Resposta normal  │   │ Comando especial │
-        │ para o usuário   │   │ de lembrete      │
-        └──────────────────┘   └────────┬─────────┘
-                                         │
-                                         ▼
-                                ┌──────────────────┐
-                                │    PostgreSQL    │
-                                │                  │
-                                │ Criar            │
-                                │ Editar           │
-                                │ Excluir          │
-                                │ Limpar           │
-                                └──────────────────┘
+                         ┌──────────────────┐
+                         │      USUÁRIO     │
+                         │     Discord      │
+                         └────────┬─────────┘
+                                  │
+                                  ▼
+                         ┌──────────────────┐
+                         │     AI_V4.py     │
+                         │    Discord Bot   │
+                         └────────┬─────────┘
+                                  │
+                    ┌─────────────┴─────────────┐
+                    │                           │
+                    ▼                           ▼
+           ┌──────────────────┐       ┌──────────────────┐
+           │    PostgreSQL    │       │ Histórico recente│
+           │     Memória      │       │   da conversa    │
+           └────────┬─────────┘       └──────────────────┘
+                    │
+                    ▼
+           ┌──────────────────┐
+           │   Prompt atual   │
+           │ + lembretes      │
+           │ + contexto       │
+           └────────┬─────────┘
+                    │
+                    ▼
+           ┌──────────────────┐
+           │    APIs de IA    │
+           │                  │
+           │ Groq             │
+           │ OpenRouter       │
+           │ Gemini           │
+           └────────┬─────────┘
+                    │
+                    │ limite/erro
+                    ▼
+           ┌──────────────────┐
+           │ Rotação de chaves│
+           └────────┬─────────┘
+                    │
+                    ▼
+           ┌──────────────────┐
+           │ Resposta da IA   │
+           └────────┬─────────┘
+                    │
+             ┌──────┴──────┐
+             │             │
+             ▼             ▼
+      ┌──────────────┐ ┌────────────────┐
+      │ Fala normal  │ │ Comandos       │
+      │              │ │ de lembretes   │
+      └──────────────┘ └───────┬────────┘
+                                │
+                                ▼
+                         ┌──────────────┐
+                         │ Regex /      │
+                         │ Processamento│
+                         └──────┬───────┘
+                                │
+                                ▼
+                         ┌──────────────┐
+                         │  PostgreSQL  │
+                         │              │
+                         │ Adicionar    │
+                         │ Editar       │
+                         │ Excluir      │
+                         │ Limpar       │
+                         └──────────────┘
 ```
 
 ---
@@ -217,12 +258,12 @@ API 1
  │
  ▼
 API 2
- │
+ ├── Nova tentativa com a mesma mensagem
  ├── Limite atingido
  │
  ▼
 API 3
- │
+ ├── Nova tentativa com a mesma mensagem
  ├── Limite atingido
  │
  ▼
@@ -267,6 +308,18 @@ A AI gera o comando em um formato específico e o Python identifica esse comando
 
 ---
 
+## 📋 Múltiplos comandos
+
+A AI_V4 também consegue processar vários comandos de lembretes em uma única interação.
+
+Os comandos são separados pelo caractere `/`.
+
+### Exemplo
+
+```text
+comandoadicionar 10:30 ir comer/comandoadicionar 14:00 estudar Python | Prontinho! Os dois lembretes foram agendados.
+
+```
 ## 🗄️ Banco de dados
 
 A AI_V4 utiliza **PostgreSQL** para armazenar os lembretes.
@@ -396,7 +449,7 @@ API_PRINCIPAL=sua_chave
 API_RESERVA1=sua_chave
 API_RESERVA2=sua_chave
 ...
-API_RESERVA12=sua_chave
+API_RESERVA13=sua_chave
 ```
 
 > 🔐 Nunca publique tokens, senhas ou chaves de API no GitHub.
@@ -427,6 +480,13 @@ O desenvolvimento da AI_V4 permitiu praticar conceitos mais avançados de Python
 * 📡 Requisições assíncronas
 * 📝 Manipulação de dados
 * 🏗️ Organização e separação de responsabilidades
+* 🔁 Sistemas de fallback e rotação de APIs
+* 🧪 Testes e debugging de sistemas assíncronos
+* 🔍 Processamento de comandos com expressões regulares
+* 🔀 Processamento de múltiplos comandos em uma única resposta
+* 🕐 Manipulação de fusos horários
+* 🔄 Controle de estado de lembretes
+* 🌐 Execução de aplicações em nuvem
 
 ---
 
