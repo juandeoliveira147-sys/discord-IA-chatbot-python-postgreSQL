@@ -174,10 +174,10 @@ def editar_lembrete_do_banco(novo_texto, texto_antigo , usuario_id , canal_id,ho
 
             query = """
                 UPDATE public.memoriaai 
-                SET lembrete = %s, horario = %s 
+                SET lembrete = %s, horario = %s, aviso_30min=%s , enviado=%s 
                 WHERE lembrete = %s AND usuario_id = %s AND canal_id = %s
             """
-            cursor.execute(query, (novo_texto ,horario_novo, texto_antigo, usuario_id, canal_id ))
+            cursor.execute(query, (novo_texto ,horario_novo,False , False,  texto_antigo, usuario_id, canal_id ))
         
         if cursor.rowcount > 0:
             print(f"Sucesso! {cursor.rowcount} ao editar.")
@@ -442,33 +442,43 @@ async def obter_resposta_groq(id_contexto, mensagem_usuario, usuario_id, canal_i
         1. Se o usuário NÃO informar um horário, NÃO coloque horário no comando.
 
         Formato:
-        excluirlembrete texto_do_lembrete | ```resposta```
+        excluirlembrete texto_do_lembrete | resposta
 
         Exemplo:
         Usuário: "exclua o lembrete ir comer"
         Comando:
-        excluirlembrete ir comer | ```Pronto! Removi o lembrete.```
+        excluirlembrete ir comer | Pronto! Removi o lembrete.
 
         2. Se o usuário INFORMAR explicitamente um horário, coloque o horário.
 
         Exemplo:
         Usuário: "exclua o lembrete de ir comer das 15:00"
         Comando:
-        excluirlembrete 15:00 ir comer | ```Pronto! Removi o lembrete.```
+        excluirlembrete 15:00 ir comer | Pronto! Removi o lembrete.
+
+        SE O USUARIO INFORMAR DIVERSOS COMANDOS DE UMA UNICA VEZ , SEPARE OS COMANDOS POR /
+
+        EXEMPLO:
+
+        Seu comando: comandoadicionar 19:00 ir comer/ comandoadicionar 22:00 ir jantar | pronto, seus lembretes foram agendados!
 
         3. NUNCA invente um horário.
         4. NUNCA copie um horário de outro lembrete apenas porque ele existe na memória.
         5. Se o usuário não informar horário, o horário deve ser NULL/None.
         """
         "A regra numero 2 é muito importante que seja escrito o comando da forma correta para que o Python possa fazer a exclusão do lembrete escolhido pelo usuario"
-        "6. Caso o usuario queira adicionar um lembrete, Retorne no começo do texto o comando 'comandoadicionar' e o texto a ser adicionado ao banco de dados, excrevendo desta forma o Python executará.,Você deve corrigir a ortografia e salvar da forma que você preferir escrever des de que esteja de acordo com o que o usuario quer adicioanar, Dando sempre preferencia para horario primeiro e depois o texto. Exemplo: 'comandoadicionar 07:00 ir a academia | Lembrete agendado com sucesso!'"
-        "7. Caso o usuário queira editar um lembrete, você deve retornar uma linha de comando estrita para o sistema antes da sua resposta textual.Siga exatamente a estrutura abaixo, separando os argumentos por vírgula e a sua fala por uma barra vertical (|).Sua fala deve estar entre 3 crases, desse formato (```). As horas devem estar obrigatoriamente no formato HH:MM.Estrutura do comando:comandoeditar [HORA_ANTIGA], [HORA_NOVA], [TEXTO_ANTIGO], [TEXTO_NOVO] | ```[Sua mensagem de confirmação para o usuário]``` . Regras estritas:Primeiro argumento: A hora original (antiga) do lembrete no formato HH:MM.Segundo argumento: A nova hora desejada no formato HH:MM (se o usuário não mudar a hora, repita a hora antiga).Terceiro argumento: O texto/descrição antigo do lembrete que estava salvo.Quarto argumento: O novo texto/descrição do lembrete (se o usuário não mudar o texto, repita o texto antigo).Separação: Use uma vírgula para separar cada um dos 4 argumentos. Use o caractere | apenas para separar o comando da sua fala final ENTRE 3 crases(```).Exemplo de aplicação:Pedido do usuário: 'Troque o lembrete das 8 horas de ir correr para ir fazer compras às 14:00' Sua resposta exata: comandoeditar 08:00, 14:00, ir correr, ir fazer compras | ```Lembrete atualizado com sucesso!``` '"
+        "6. Caso o usuario queira adicionar um lembrete, Retorne no começo do texto o comando 'comandoadicionar' e o texto a ser adicionado ao banco de dados, excrevendo desta forma o Python executará.,Você deve corrigir a ortografia e salvar da forma que você preferir escrever des de que esteja de acordo com o que o usuario quer adicionar, Dando sempre preferencia para horario primeiro e depois o texto. Exemplo: 'comandoadicionar 07:00 ir a academia | Lembrete agendado com sucesso!'"
+        "7. Caso o usuário queira editar um lembrete, você deve retornar uma linha de comando estrita para o sistema antes da sua resposta textual.Siga exatamente a estrutura abaixo, separando os argumentos por vírgula e a sua fala por uma barra vertical (|). As horas devem estar obrigatoriamente no formato HH:MM.Estrutura do comando:comandoeditar [HORA_ANTIGA], [HORA_NOVA], [TEXTO_ANTIGO], [TEXTO_NOVO] | [Sua mensagem de confirmação para o usuário] . Regras estritas:Primeiro argumento: A hora original (antiga) do lembrete no formato HH:MM.Segundo argumento: A nova hora desejada no formato HH:MM (se o usuário não mudar a hora, repita a hora antiga).Terceiro argumento: O texto/descrição antigo do lembrete que estava salvo.Quarto argumento: O novo texto/descrição do lembrete (se o usuário não mudar o texto, repita o texto antigo).Separação: Use uma vírgula para separar cada um dos 4 argumentos. Use o caractere | apenas para separar o comando da sua fala final .Exemplo de aplicação:Pedido do usuário: 'Troque o lembrete das 8 horas de ir correr para ir fazer compras às 14:00' Sua resposta exata: comandoeditar 08:00, 14:00, ir correr, ir fazer compras | Lembrete atualizado com sucesso! '"
         "8. Foco em Organização: Ajude ativamente com os compromissos.\n"
         "9. Tom de Voz: Use palavras gentis, mantenha o profissionalismo como uma assistente gentil \n"
         "10. Na organização, sempre de preferência a mostrar a hora primeiro(se tiver) e depois o lembrete, A hora deve ser formatada em hh:mm, se não tiver minuto somente o hh. Exemplo: '19:00 - Ir Jantar com meus parentes'"
-        "11. NUNCA USE AS CRASES OU SIMBOLOS NA PARTE DO COMANDO, IRÁ DAR ERRO AO EXECUTAR A QUERY, USE SOMENTE NAS SUAS FALAS"
-        "12. COMO DITO ANTES TODAS AS SUAS FALAS PRECISAM ESTAR ENTRE ``` , EXEMPLO: ......|```lembrete agendado com sucesso!```"
-        "13. CASO O ASSUNTO FOR SOBRE CODIGO E VOCÊ MANDAR UM BLOCO DE CODIGO, VOCÊ DEVE SEPARAR SUAS PALAVRAS DO CODIGO ENVIADO , USANDO 3(`) PARA FINALIZAR SUA FRASE E 3(`) PARA COMEÇAR O CODIGO DANDO ESPAÇO ENTRE AS 3 CRASES DE CADA AÇÃO. EXEMPLO DA SUA FALA NESSES CASOS:' ```Aqui está um um codigo Python para resolver o problema que você pediu ``` ```codigo ennviado``` ``` dessa forma seu problema estará resolvido '.  SIGA DESTA EXATA FORMA EM SUAS FALAS!"
+        '''11. REGRAS DE FORMATAÇÃO:
+        - NUNCA USE CRASES (`) OU BLOCOS DE CÓDIGO (```) NA PARTE DOS COMANDOS DO SISTEMA.
+        - OS COMANDOS DEVEM SER SEMPRE TEXTO PURO, SEM FORMATAÇÃO.
+        - O CARACTERE | DEVE SER USADO SOMENTE PARA SEPARAR O COMANDO DA FALA FINAL.
+        - O CARACTERE / DEVE SER USADO SOMENTE PARA SEPARAR MÚLTIPLOS COMANDOS.
+        - QUANDO ESTIVER MOSTRANDO CÓDIGO PARA O USUÁRIO, COMO CÓDIGO PYTHON OU OUTRA LINGUAGEM, VOCÊ PODE E DEVE USAR BLOCOS DE CÓDIGO , POREM, COM 6 CRASES(`) DESSA FORMA: ``````.EXEMPLO : 'Aqui está uma lista de codigo python ``````Python....`````` ...fico feliz em ajudar com seu projeto python'
+        - FORA DE EXEMPLOS OU LISTAS DE CÓDIGO, NÃO USE BLOCOS ```.'''
         "Seja breve, organizada e responda sempre em português com muita doçura."
         f"Atenção: A lista {lembretes_atuais} mostra o historico de conversa com os lembretes que existem de verdade AGORA. Se um lembrete apareceu no histórico de conversas anterior, mas NÃO está nessa lista atualizada, significa que ele já foi excluído e não existe mais. Nunca mencione lembretes que não estão na lista atualizada."
         "Sempre leia atentamente enviando somente os lembretes ao inves de enviar as mensagens do usuario junto"
@@ -573,131 +583,152 @@ async def obter_resposta_groq(id_contexto, mensagem_usuario, usuario_id, canal_i
 
             
     fala_ia = resposta_ia
+    partes = fala_ia.split("|" , 1)
+    comandos_texto = partes[0]
+    #segurança nunca é demais 
+    comandos_texto = comandos_texto.replace("```", "").strip()
+    comandos_texto = comandos_texto.replace("``````", "")
+    comandos = comandos_texto.split("/")
+    if len(partes) > 1:
+        fala_ia = partes[1]
+    else:
+        fala_ia = partes[0]
+        comandos_texto = ""
+        comandos = []
+    
+    fala_ia = str(f"```{fala_ia}```")
 
 
-    if 'comandoadicionar' in resposta_ia.lower():
-        padrao_adicionar = r"^\s*(comandoadicionar)\s+(?:(\d{1,2}:\d{2}),?\s+)?([^|]+)\s*\|\s*(.+)$"
-        resultado_add = re.match(padrao_adicionar, resposta_ia, flags=(re.IGNORECASE | re.DOTALL))
-        
-        if resultado_add:
-            comando = resultado_add.group(1).strip()
-            horario = resultado_add.group(2)  # Ficará None se não houver hora
-            texto_lembrete = resultado_add.group(3).strip()
-            
-            # Correção da lógica da fala da IA
-            fala_ia = resultado_add.group(4).strip() if resultado_add.group(4) else "Lembrete adicionado!"
+    
 
-
-            match_hora_perdida = re.match(r"^(\d{1,2}:\d{2})\s+(.+)$", texto_lembrete)
-            if match_hora_perdida:
-                horario = match_hora_perdida.group(1)
-                texto_lembrete = match_hora_perdida.group(2).strip()
-
-            
-            adicionar = salvar_lembrete_no_banco(texto_lembrete, usuario_id, canal_id, horario)
-            if adicionar == True:
-                print("🎉 Match Adicionar Sucesso!")
-                print(f"1. Comando: {comando}")
-                print(f"2. Horário: {horario}")
-                print(f"3. Texto do Lembrete: '{texto_lembrete}'")
-                print(f"4. Fala da IA: {fala_ia}\n\n")
-                historico_conversas[id_contexto].append({"role": "assistant", "content": fala_ia})
-                return fala_ia
-                
-        else:
-            print("Falha no match do comando adicionar.")
-                
-
-    if 'comandolimpar' in resposta_ia.lower():
-        padrao_limpar = r"^\s*(comandolimpar)(?:\s+([^|]+?))?\s*(?:\s*\|\s*(.+))?$"
-        resultado_limpar = re.match(padrao_limpar, resposta_ia, flags=(re.IGNORECASE | re.DOTALL))
-        if resultado_limpar:
-            fala_ia = resultado_limpar.group(3).strip() if resultado_limpar.group(3) else "Todos os seus lembretes foram limpos!"
-
-            limpar = limpar_lembretes_do_banco(usuario_id , canal_id)
-            if limpar == True:
-                print("\nO banco de dados foi limpo!")
-                historico_conversas[id_contexto].append({"role": "assistant", "content": fala_ia})
-                return fala_ia
-
-    if 'excluirlembrete' in resposta_ia.lower():
-    # Novo padrão: Captura 'excluirlembrete', aceita aspas opcionais, pega o lembrete até a quebra de linha
-        # Adicionada uma vírgula opcional \s*,?\s+ após a captura do horário
-        padrao_excluir = r"^\s*(excluirlembrete)\s+(?:(\d{1,2}:\d{2})\s*,?\s+)?([^|]+?)\s*(?:\s*\|\s*(.+))?$"
+    for comando in comandos:
+        comando = comando.strip()
 
         
-        # Usamos re.DOTALL para que o ponto (.) capture também as quebras de linha da mensagem fofa
-        match = re.search(padrao_excluir, resposta_ia, flags=re.IGNORECASE | re.DOTALL)
-        if match:
-            comando = match.group(1).strip() 
-            horario = match.group(2) # Pode ser None se não houver horário
-            texto_do_lembrete = match.group(3).strip()
-            fala_ia = match.group(4).strip() if match.group(4) else "Lembrete excluído!"
 
-            #segurança no horario
-            match_hora_perdida = re.match(r"^(\d{1,2}:\d{2})\s+(.+)$", texto_do_lembrete)
-            if match_hora_perdida:
-                horario = match_hora_perdida.group(1)
-                texto_do_lembrete = match_hora_perdida.group(2).strip()
-
-            print(f"texto do comando:{comando}")
-            print(f"texto lembrete: {texto_do_lembrete}")
-            print(f"horario excluido:{horario}")
-            print(f"Fala da AI: {fala_ia}")
-            print(f"\nResultado do re match: {match}\n\n")
-
+        if comando.lower().startswith('comandoadicionar'):
+            padrao_adicionar = r"^\s*(comandoadicionar)\s+(?:(\d{1,2}:\d{2}),?\s+)?([^|]+?)\s*$"
+            resultado_add = re.match(padrao_adicionar, comando, flags=(re.IGNORECASE | re.DOTALL))
             
-
            
-            excluir = excluir_lembrete_do_banco(texto_do_lembrete , usuario_id , canal_id , horario)
-            if excluir == True:
-                print("\n[comando] Lembrete excluído do banco de dados com sucesso!")
-                if fala_ia == '':
-                    fala_ia = "Lembrete Excluido"
+            if resultado_add:
+                comando_executado = resultado_add.group(1).strip()
+                horario = resultado_add.group(2)  # Ficará None se não houver hora
+                texto_lembrete = resultado_add.group(3).strip()
+                
+
+
+                match_hora_perdida = re.match(r"^(\d{1,2}:\d{2})\s+(.+)$", texto_lembrete)
+                if match_hora_perdida:
+                    horario = match_hora_perdida.group(1)
+                    texto_lembrete = match_hora_perdida.group(2).strip()
+
+                
+                adicionar = salvar_lembrete_no_banco(texto_lembrete, usuario_id, canal_id, horario)
+                if adicionar == True:
+                    print("🎉 Match Adicionar Sucesso!")
+                    print(f"1. Comando: {comando_executado}")
+                    print(f"2. Horário: {horario}")
+                    print(f"3. Texto do Lembrete: '{texto_lembrete}'")
+                    print(f"4. Fala da IA: {fala_ia}\n\n")
                     historico_conversas[id_contexto].append({"role": "assistant", "content": fala_ia})
-                    return fala_ia
+                    
+                    
+            else:
+                print("Falha no match do comando adicionar.")
+                    
+
+        if comando.lower().startswith('comandolimpar'):
+            padrao_limpar = r"^\s*(comandolimpar)(?:\s+([^|]+?))?\s*(?:\s*[|/]\s*(.+))?$"
+            resultado_limpar = re.match(padrao_limpar, comando, flags=(re.IGNORECASE | re.DOTALL))
+            if resultado_limpar:
+                fala_ia = resultado_limpar.group(3).strip() if resultado_limpar.group(3) else "Todos os seus lembretes foram limpos!"
+
+                limpar = limpar_lembretes_do_banco(usuario_id , canal_id)
+                if limpar == True:
+                    print("\nO banco de dados foi limpo!")
+                    historico_conversas[id_contexto].append({"role": "assistant", "content": fala_ia})
+                    
+
+        if comando.lower().startswith('excluirlembrete'):
+        # Novo padrão: Captura 'excluirlembrete', aceita aspas opcionais, pega o lembrete até a quebra de linha
+            # Adicionada uma vírgula opcional \s*,?\s+ após a captura do horário
+            padrao_excluir = r"^\s*(excluirlembrete)\s+(?:(\d{1,2}:\d{2})\s*,?\s+)?(.+?)\s*$"
+
+            
+            # Usamos re.DOTALL para que o ponto (.) capture também as quebras de linha da mensagem fofa
+            match = re.search(padrao_excluir, comando, flags=re.IGNORECASE | re.DOTALL)
+            if match:
+                comando_executado = match.group(1).strip() 
+                horario = match.group(2) # Pode ser None se não houver horário
+                texto_do_lembrete = match.group(3).strip()
+
+                #segurança no horario
+                match_hora_perdida = re.match(r"^(\d{1,2}:\d{2})\s+(.+)$", texto_do_lembrete)
+                if match_hora_perdida:
+                    horario = match_hora_perdida.group(1)
+                    texto_do_lembrete = match_hora_perdida.group(2).strip()
+
+                print(f"texto do comando:{comando_executado}")
+                print(f"texto lembrete: {texto_do_lembrete}")
+                print(f"horario excluido:{horario}")
+                print(f"Fala da AI: {fala_ia}")
+                print(f"\nResultado do re match: {match}\n\n")
+
+                
+
+            
+                excluir = excluir_lembrete_do_banco(texto_do_lembrete , usuario_id , canal_id , horario)
+                if excluir == True:
+                    print("\n[comando] Lembrete excluído do banco de dados com sucesso!")
+                    if fala_ia == '':
+                        fala_ia = "Lembrete Excluido"
+                        historico_conversas[id_contexto].append({"role": "assistant", "content": fala_ia})
+                        
+                    else:
+                        historico_conversas[id_contexto].append({"role": "assistant", "content": fala_ia})
+                        
                 else:
+                    fala_ia = 'erro ao mecher no banco de dados'
                     historico_conversas[id_contexto].append({"role": "assistant", "content": fala_ia})
-                    return fala_ia
+                    
+            elif match is None:
+                print('Match vazio')
+                
+        if comando.lower().startswith('comandoeditar'):
+            padrao_editar = r"^\s*(comandoeditar)\s+(\d{1,2}:\d{2}),\s*(\d{1,2}:\d{2}),\s*([^|,]+),\s*([^|]+?)\s*$"
+            resultado_editar = re.match(padrao_editar, comando, re.IGNORECASE | re.DOTALL)
+            print(f' do match editar{resultado_editar}')
+
+            if resultado_editar:
+                comando_executado = resultado_editar.group(1)
+                horario_antigo = resultado_editar.group(2)
+                horario_novo = resultado_editar.group(3)
+                texto_antigo = resultado_editar.group(4)
+                texto_novo = resultado_editar.group(5)
+                
+                print(f"Comando: {comando_executado}")
+                print(f"Texto Novo: {texto_novo}")
+                print(f"Texto Antigo (Banco): {texto_antigo}")
+                print(f"fala da AI : {fala_ia}\n\n")
+                editar = editar_lembrete_do_banco(texto_novo, texto_antigo , usuario_id , canal_id,horario_novo)
+                if editar == True:
+                    print("Lembrete editado com sucesso!\n")
+                    historico_conversas[id_contexto].append({"role": "assistant", "content": fala_ia})
+                    
+                else:
+                    print("\nErro ao editar o lembrete")
             else:
-                fala_ia = 'erro ao mecher no banco de dados'
-                historico_conversas[id_contexto].append({"role": "assistant", "content": fala_ia})
-                return fala_ia
-        elif match is None:
-            print('Match vazio')
-            
-    if 'comandoeditar' in resposta_ia.lower():
-        padrao_editar = r"^\s*(comandoeditar)\s+(\d{1,2}:\d{2}),\s*(\d{1,2}:\d{2}),\s*([^|,]+),\s*([^|]+?)\s*\|\s*(.+)$"
-        resultado_editar = re.match(padrao_editar, resposta_ia, re.IGNORECASE | re.DOTALL)
-        print(f' do match editar{resultado_editar}')
-
-        if resultado_editar:
-            comando = resultado_editar.group(1)
-            horario_antigo = resultado_editar.group(2)
-            horario_novo = resultado_editar.group(3)
-            texto_antigo = resultado_editar.group(4)
-            texto_novo = resultado_editar.group(5)
-            fala_ia = resultado_editar.group(6)
-            
-            print(f"Comando: {comando}")
-            print(f"Texto Novo: {texto_novo}")
-            print(f"Texto Antigo (Banco): {texto_antigo}")
-            print(f"fala da AI : {fala_ia}\n\n")
-            editar = editar_lembrete_do_banco(texto_novo, texto_antigo , usuario_id , canal_id,horario_novo)
-            if editar == True:
-                print("Lembrete editado com sucesso!\n")
-                historico_conversas[id_contexto].append({"role": "assistant", "content": fala_ia})
-                return fala_ia
-            else:
-                print("\nErro ao editar o lembrete")
-        else:
-            print("Formato inválido.")
+                print("Formato inválido.")
 
 
 
 
-    if resposta_ia == '':
-        resposta_ia = 'Sua lista de lembretes foi limpa'
+
+
+
+    if fala_ia == '':
+        fala_ia = 'Sua lista de lembretes foi limpa'
     # Guarda a resposta da IA na memória ram
     historico_conversas[id_contexto].append({"role": "assistant", "content": fala_ia})
     return fala_ia
