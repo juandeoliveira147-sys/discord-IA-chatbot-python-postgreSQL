@@ -229,7 +229,7 @@ def excluir_lembrete_do_banco(texto_lembrete, usuario_id, canal_id , horario = N
                 AND canal_id = %s
             """
 
-            cursor.execute(query,(texto_lembrete, usuario_id, canal_id , horario))
+            cursor.execute(query,(texto_lembrete, usuario_id, canal_id))
         if cursor.rowcount > 0:
             print(f"Sucesso! {cursor.rowcount} ao excluir.")
             conexao.commit() 
@@ -292,14 +292,6 @@ def salvar_lembrete_no_banco(texto_lembrete, usuario_id, canal_id, horario=None)
     except Exception as e:
         print(f"Erro ao salvar no banco de dados: {e}")
         return False
-
-
-
-
-
-
-
-
 
 
 #======================AVISOS DE LEMBRETES AUTOMATICOS===================
