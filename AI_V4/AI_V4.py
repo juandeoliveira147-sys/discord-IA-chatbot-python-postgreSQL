@@ -487,6 +487,7 @@ async def obter_resposta_groq(id_contexto, mensagem_usuario, usuario_id, canal_i
         - QUANDO ESTIVER MOSTRANDO CÓDIGO PARA O USUÁRIO, COMO CÓDIGO PYTHON OU OUTRA LINGUAGEM, VOCÊ PODE E DEVE USAR BLOCOS DE CÓDIGO , POREM, COM 6 CRASES(`) DESSA FORMA: ``````.EXEMPLO : 'Aqui está uma lista de codigo python ``````Python....`````` ...fico feliz em ajudar com seu projeto python'
         - FORA DE EXEMPLOS OU LISTAS DE CÓDIGO, NÃO USE BLOCOS ```.'''
         "Seja breve, organizada e responda sempre em português com muita doçura."
+        "VOCÊ DEVE OBRIGATORIAMENTE MANDAR UMA FALA DEPOIS DA BARRA DE COMANDO PARA MELHOR EXPERIENCIA DO USUARIO!"
         f"Atenção: A lista {lembretes_atuais} mostra o historico de conversa com os lembretes que existem de verdade AGORA. Se um lembrete apareceu no histórico de conversas anterior, mas NÃO está nessa lista atualizada, significa que ele já foi excluído e não existe mais. Nunca mencione lembretes que não estão na lista atualizada."
         "Sempre leia atentamente enviando somente os lembretes ao inves de enviar as mensagens do usuario junto"
         "Lembre-se de caso o usuario diga que o lembrete não foi removido certifiquese de que está digitando o comando da maneira correta"
@@ -629,6 +630,7 @@ async def obter_resposta_groq(id_contexto, mensagem_usuario, usuario_id, canal_i
                 if match_hora_perdida:
                     horario = match_hora_perdida.group(1)
                     texto_lembrete = match_hora_perdida.group(2).strip()
+                    texto_lembrete = texto_lembrete.replace("NULL", "")
 
                 
                 adicionar = salvar_lembrete_no_banco(texto_lembrete, usuario_id, canal_id, horario)
@@ -638,6 +640,7 @@ async def obter_resposta_groq(id_contexto, mensagem_usuario, usuario_id, canal_i
                     print(f"2. Horário: {horario}")
                     print(f"3. Texto do Lembrete: '{texto_lembrete}'")
                     print(f"4. Fala da IA: {fala_ia}\n\n")
+
                     historico_conversas[id_contexto].append({"role": "assistant", "content": fala_ia})
                     
                     
@@ -713,6 +716,7 @@ async def obter_resposta_groq(id_contexto, mensagem_usuario, usuario_id, canal_i
                 horario_novo = resultado_editar.group(3)
                 texto_antigo = resultado_editar.group(4)
                 texto_novo = resultado_editar.group(5)
+                texto_novo = texto_lembrete.replace("NULL", "")
                 
                 print(f"Comando: {comando_executado}")
                 print(f"Texto Novo: {texto_novo}")
@@ -735,7 +739,7 @@ async def obter_resposta_groq(id_contexto, mensagem_usuario, usuario_id, canal_i
 
 
     if fala_ia == '':
-        fala_ia = 'Sua lista de lembretes foi limpa'
+        fala_ia = 'acho que consegui consegui limpar o banco de dados^^'
     # Guarda a resposta da IA na memória ram
     historico_conversas[id_contexto].append({"role": "assistant", "content": fala_ia})
     return fala_ia
