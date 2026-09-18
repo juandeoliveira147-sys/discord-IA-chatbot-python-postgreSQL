@@ -178,6 +178,13 @@ def editar_lembrete_do_banco(novo_texto, texto_antigo , usuario_id , canal_id,ho
                 WHERE lembrete = %s AND usuario_id = %s AND canal_id = %s
             """
             cursor.execute(query, (novo_texto ,horario_novo,False , False,  texto_antigo, usuario_id, canal_id ))
+        else:
+            query = """
+                UPDATE public.memoriaai 
+                SET lembrete = %s, aviso_30min=%s , enviado=%s 
+                WHERE lembrete = %s AND usuario_id = %s AND canal_id = %s
+            """
+            cursor.execute(query, (novo_texto ,False , False,  texto_antigo, usuario_id, canal_id ))
         
         if cursor.rowcount > 0:
             print(f"Sucesso! {cursor.rowcount} ao editar.")
@@ -222,7 +229,7 @@ def excluir_lembrete_do_banco(texto_lembrete, usuario_id, canal_id , horario = N
                 AND canal_id = %s
             """
 
-            cursor.execute(query,(texto_lembrete, usuario_id, canal_id))
+            cursor.execute(query,(texto_lembrete, usuario_id, canal_id , horario))
         if cursor.rowcount > 0:
             print(f"Sucesso! {cursor.rowcount} ao excluir.")
             conexao.commit() 
