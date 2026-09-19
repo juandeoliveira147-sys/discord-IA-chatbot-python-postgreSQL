@@ -439,6 +439,9 @@ async def obter_resposta_groq(id_contexto, mensagem_usuario, usuario_id, canal_i
         'REGRAS PARA EXCLUIR LEMBRETES:'
         """
         1. Se o usuário NÃO informar um horário, NÃO coloque horário no comando.
+        NÃO COLOQUE O TEXTO NULL CASO NÃO TENHA HORARIO, APENAS REALMENTE SIGA O EXEMPLO MENCIONADO A CIMA
+
+        REPITO , NUNCA COLOQUE A PALAVRA NULL MESMO QUE SEJA SEM HORARIO!!! CASSO SEJA SEM HORARIO APENAS SIGA ESTE EXEMPLO:
 
         Formato:
         excluirlembrete texto_do_lembrete | resposta
@@ -447,6 +450,7 @@ async def obter_resposta_groq(id_contexto, mensagem_usuario, usuario_id, canal_i
         Usuário: "exclua o lembrete ir comer"
         Comando:
         excluirlembrete ir comer | Pronto! Removi o lembrete.
+
 
         2. Se o usuário INFORMAR explicitamente um horário, coloque o horário.
 
@@ -581,7 +585,7 @@ async def obter_resposta_groq(id_contexto, mensagem_usuario, usuario_id, canal_i
 
 #============================================================
 
-            
+    
     fala_ia = resposta_ia
     partes = fala_ia.split("|" , 1)
     comandos_texto = partes[0]
@@ -591,12 +595,14 @@ async def obter_resposta_groq(id_contexto, mensagem_usuario, usuario_id, canal_i
     comandos = comandos_texto.split("/")
     if len(partes) > 1:
         fala_ia = partes[1]
+        print(f"Fala ia no if ={fala_ia}")
     else:
         fala_ia = partes[0]
         comandos_texto = ""
         comandos = []
     
     fala_ia = str(f"```{fala_ia}```")
+
 
 
     
@@ -706,9 +712,9 @@ async def obter_resposta_groq(id_contexto, mensagem_usuario, usuario_id, canal_i
                 comando_executado = resultado_editar.group(1)
                 horario_antigo = resultado_editar.group(2)
                 horario_novo = resultado_editar.group(3)
-                texto_antigo = resultado_editar.group(4)
-                texto_novo = resultado_editar.group(5)
-                texto_novo = texto_lembrete.replace("NULL", "")
+                texto_antigo = resultado_editar.group(4).strip()
+                texto_novo = resultado_editar.group(5).strip()
+                texto_novo = texto_novo.replace("NULL", "")
                 
                 print(f"Comando: {comando_executado}")
                 print(f"Texto Novo: {texto_novo}")
