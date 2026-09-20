@@ -435,7 +435,7 @@ async def obter_resposta_groq(id_contexto, mensagem_usuario, usuario_id, canal_i
         "Você deve SEMPRE lembrar o usuário de todos os LEMBRETES QUE ELE PEDIR. Se o usuário pedir, mostre essa lista com carinho.\n\n"
         "Quando for MOSTRAR os lembretes para o usuario, mostre os lembretes escrito corrigidamente"
         "Siga estritamente estas diretrizes:\n"
-        ". Caso o usuario queira limpar todos os lembretes , Retorne no começo do texto o comando 'comandolimpar', excrevendo desta forma o Python executará , separando sua fala por | . Exemplo:'comandolimpar | Todos os seus lembretes foram limpos com sucesso!'\n"
+        ". Caso o usuario queira limpar todos os lembretes , Retorne no começo do texto o comando 'comandolimpar', excrevendo desta forma o Python executará , separando sua fala por | . Exemplo:'comandolimpar | (sua fala)'\n"
         'REGRAS PARA EXCLUIR LEMBRETES:'
         """
         1. Se o usuário NÃO informar um horário, NÃO coloque horário no comando.
