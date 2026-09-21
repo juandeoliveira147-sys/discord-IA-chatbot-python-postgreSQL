@@ -595,7 +595,7 @@ async def obter_resposta_groq(id_contexto, mensagem_usuario, usuario_id, canal_i
     comandos = comandos_texto.split("/")
     if len(partes) > 1:
         fala_ia = partes[1]
-        print(f"Fala ia no if ={fala_ia}")
+        
     else:
         fala_ia = partes[0]
         comandos_texto = ""
@@ -780,6 +780,11 @@ async def on_ready():
     )
 
 @bot.event
+async def on_disconnect():
+    print("O bot foi desconectado do Discord! Tentando restabelecer conexão automática...")
+
+
+@bot.event
 async def on_message(message):
     if message.author == bot.user:
         return
@@ -839,4 +844,4 @@ async def on_message(message):
 
 
 # Executa o bot oficial
-bot.run(DISCORD_TOKEN)
+bot.run(DISCORD_TOKEN , reconnect=True)
